@@ -27,6 +27,11 @@ npm run preview   # serve the dist/ build locally
 
 Always run `npm run build` after changes. The build runs `tsc -b` first so TypeScript errors surface before Vite bundles.
 
+## Version control
+
+- Commits are fine to create automatically after completing a task.
+- **Never `git push` unless the user explicitly asks for it.**
+
 ## Project structure
 
 ```raw
