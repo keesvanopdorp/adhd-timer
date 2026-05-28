@@ -1,5 +1,5 @@
 import React, { useRef, useState } from "react"
-import { IconDownload, IconUpload, IconMenu2 } from "@tabler/icons-react"
+import { IconDownload, IconUpload, IconMenu2, IconAlertTriangle } from "@tabler/icons-react"
 import {
   Dialog,
   DialogTrigger,
@@ -40,6 +40,12 @@ export default function DataModal(): React.ReactElement {
   const [importError, setImportError] = useState<string | null>(null)
   const [importOk, setImportOk] = useState(false)
   const [open, setOpen] = useState(false)
+  const [confirmReset, setConfirmReset] = useState(false)
+
+  const handleReset = (): void => {
+    loadData({ tasks: [], blocksDone: 0, totalFocusMin: 0, streak: 0, lastBlockDate: null })
+    setConfirmReset(false)
+  }
 
   const json = JSON.stringify(getExportData(), null, 2)
 
@@ -77,7 +83,7 @@ export default function DataModal(): React.ReactElement {
   }
 
   return (
-    <Dialog open={open} onOpenChange={(v) => { setOpen(v); if (!v) { setImportError(null); setImportOk(false) } }}>
+    <Dialog open={open} onOpenChange={(v) => { setOpen(v); if (!v) { setImportError(null); setImportOk(false); setConfirmReset(false) } }}>
       <DialogTrigger asChild>
         <button className="hamburger-btn" aria-label="Menu">
           <IconMenu2 size={16} />
@@ -116,6 +122,29 @@ export default function DataModal(): React.ReactElement {
           </Button>
           {importError !== null && <div className="data-feedback error">{importError}</div>}
           {importOk && <div className="data-feedback ok">Backup geladen.</div>}
+        </div>
+
+        <div className="data-divider" />
+
+        <div className="data-section">
+          <div className="data-section-label danger-label">Gevaarzone</div>
+          <p className="data-section-sub">Verwijdert alle taken, statistieken en streak permanent.</p>
+          {!confirmReset ? (
+            <Button variant="default" onClick={() => setConfirmReset(true)} className="data-btn danger-btn">
+              <IconAlertTriangle size={13} />
+              Alles resetten
+            </Button>
+          ) : (
+            <div className="danger-confirm">
+              <span>Zeker weten?</span>
+              <Button variant="default" onClick={handleReset} className="data-btn danger-btn">
+                Ja, reset alles
+              </Button>
+              <Button variant="default" onClick={() => setConfirmReset(false)} className="data-btn">
+                Annuleren
+              </Button>
+            </div>
+          )}
         </div>
       </DialogContent>
     </Dialog>

@@ -620,6 +620,25 @@ body {
 .data-feedback.error { color: var(--red); background: #fdf0f0; border: 0.5px solid var(--red); }
 .data-feedback.ok { color: var(--teal-dark); background: var(--teal-bg); border: 0.5px solid var(--teal); }
 
+.danger-label { color: var(--red) !important; }
+
+.danger-btn {
+  border-color: var(--red) !important;
+  color: var(--red) !important;
+}
+.danger-btn:hover { background: #fdf0f0 !important; }
+
+.danger-confirm {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.danger-confirm span {
+  font-size: 12px;
+  color: var(--text2);
+}
+
 @keyframes dialog-fade-in {
   from { opacity: 0 }
   to { opacity: 1 }
