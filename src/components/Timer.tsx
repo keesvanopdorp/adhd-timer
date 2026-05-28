@@ -7,12 +7,14 @@ import {
   IconVolume2,
   IconVolume3,
   IconVolumeOff,
+  IconCoffee,
 } from "@tabler/icons-react"
 import { useTimerStore } from "../store"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 
 const DURATIONS = [10, 15, 25, 52] as const
+const BREAK_DURATIONS = [5, 10, 15] as const
 const WARN_AT_SECONDS = 30
 
 function drawRing(canvas: HTMLCanvasElement, pct: number, color: string): void {
@@ -107,6 +109,8 @@ export default function Timer(): React.ReactElement {
   const [volume, setVolume] = useState<number>(1)
   const [showVol, setShowVol] = useState<boolean>(false)
   const [nearEnd, setNearEnd] = useState<boolean>(false)
+  const [breakMode, setBreakMode] = useState<boolean>(false)
+  const [breakMin, setBreakMin] = useState<number>(5)
 
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null)
@@ -115,6 +119,8 @@ export default function Timer(): React.ReactElement {
   const warnedRef = useRef<boolean>(false)
   const effectiveVolumeRef = useRef<number>(1)
   effectiveVolumeRef.current = soundOn ? volume : 0
+  const breakModeRef = useRef<boolean>(false)
+  breakModeRef.current = breakMode
   const volControlRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
@@ -130,10 +136,10 @@ export default function Timer(): React.ReactElement {
 
   useEffect(() => {
     if (canvasRef.current) {
-      const color = nearEnd ? "#c47a0a" : "#5c54d4"
+      const color = breakMode ? "#1a9e6e" : nearEnd ? "#c47a0a" : "#5c54d4"
       drawRing(canvasRef.current, remaining / totalSec, color)
     }
-  }, [remaining, totalSec, nearEnd])
+  }, [remaining, totalSec, nearEnd, breakMode])
 
   const setDuration = useCallback(
     (min: number): void => {
@@ -145,6 +151,7 @@ export default function Timer(): React.ReactElement {
       setPhase("klaar")
       setDoneMsg(null)
       setNearEnd(false)
+      setBreakMode(false)
     },
     [running]
   )
@@ -154,6 +161,22 @@ export default function Timer(): React.ReactElement {
     const n = parseInt(val, 10)
     if (n > 0 && n <= 120) setDuration(n)
   }
+
+  const handleBreakDone = useCallback((): void => {
+    setRunning(false)
+    setBreakMode(false)
+    setPhase("klaar")
+    setNearEnd(false)
+    endTimeRef.current = null
+    warnedRef.current = false
+    const sec = workMin * 60
+    pausedRemainingRef.current = sec
+    setRemaining(sec)
+    setTotalSec(sec)
+    if (canvasRef.current) drawRing(canvasRef.current, 0, "#5c54d4")
+    if (effectiveVolumeRef.current > 0) playDone(effectiveVolumeRef.current)
+    setDoneMsg("Pauze klaar — tijd om te focussen!")
+  }, [workMin])
 
   const handleBlockDone = useCallback((): void => {
     setRunning(false)
@@ -186,6 +209,50 @@ export default function Timer(): React.ReactElement {
     if (effectiveVolumeRef.current > 0) playDone(effectiveVolumeRef.current)
   }, [workMin, recordBlock, resetRules, incrementBlocksSpent])
 
+  const startBreakTimer = useCallback((): void => {
+    setRunning(true)
+    setPhase("pauze")
+    warnedRef.current = false
+    endTimeRef.current = Date.now() + pausedRemainingRef.current * 1000
+
+    intervalRef.current = setInterval(() => {
+      if (endTimeRef.current === null) return
+      const secLeft = Math.round((endTimeRef.current - Date.now()) / 1000)
+
+      if (
+        secLeft <= WARN_AT_SECONDS &&
+        secLeft > 0 &&
+        !warnedRef.current &&
+        pausedRemainingRef.current > WARN_AT_SECONDS
+      ) {
+        warnedRef.current = true
+        setNearEnd(true)
+        if (effectiveVolumeRef.current > 0) playWarning(effectiveVolumeRef.current)
+      }
+
+      if (secLeft <= 0) {
+        if (intervalRef.current) clearInterval(intervalRef.current)
+        setRemaining(0)
+        handleBreakDone()
+        return
+      }
+      setRemaining(secLeft)
+    }, 500)
+  }, [handleBreakDone])
+
+  const startBreak = useCallback((min: number): void => {
+    if (intervalRef.current) clearInterval(intervalRef.current)
+    const sec = min * 60
+    pausedRemainingRef.current = sec
+    setRemaining(sec)
+    setTotalSec(sec)
+    setBreakMode(true)
+    setDoneMsg(null)
+    setNearEnd(false)
+    warnedRef.current = false
+    startBreakTimer()
+  }, [startBreakTimer])
+
   const startTimer = useCallback((): void => {
     setDoneMsg(null)
     setRunning(true)
@@ -198,7 +265,6 @@ export default function Timer(): React.ReactElement {
       if (endTimeRef.current === null) return
       const secLeft = Math.round((endTimeRef.current - Date.now()) / 1000)
 
-      // Warning sound when approaching end (only once)
       if (
         secLeft <= WARN_AT_SECONDS &&
         secLeft > 0 &&
@@ -230,11 +296,12 @@ export default function Timer(): React.ReactElement {
     }
     endTimeRef.current = null
     setRunning(false)
-    setPhase("gepauzeerd")
+    setPhase(breakModeRef.current ? "pauze gepauzeerd" : "gepauzeerd")
   }, [])
 
   const handleStart = (): void => {
     if (running) { pauseTimer(); return }
+    if (breakMode) { startBreakTimer(); return }
     if (unchecked > 0) { setShowNudge(true); return }
     setShowNudge(false)
     startTimer()
@@ -246,6 +313,7 @@ export default function Timer(): React.ReactElement {
     pausedRemainingRef.current = workMin * 60
     warnedRef.current = false
     setRunning(false)
+    setBreakMode(false)
     setRemaining(workMin * 60)
     setTotalSec(workMin * 60)
     setPhase("klaar")
@@ -264,7 +332,15 @@ export default function Timer(): React.ReactElement {
       ? `${activeTask.title} (block ${activeTask.blocksSpent + 1} van ${activeTask.blocks})`
       : "Selecteer een taak uit de backlog hieronder"
 
-  const startLabel = running ? "Pauzeer" : remaining === 0 ? "Opnieuw" : "Start"
+  const startLabel = running
+    ? "Pauzeer"
+    : breakMode
+    ? "Hervat"
+    : remaining === 0
+    ? "Opnieuw"
+    : "Start"
+
+  const ringColor = breakMode ? "var(--teal)" : nearEnd ? "var(--amber)" : undefined
 
   return (
     <div className="timer-section">
@@ -277,8 +353,9 @@ export default function Timer(): React.ReactElement {
         {DURATIONS.map((d) => (
           <Button
             key={d}
-            variant={workMin === d && customVal === "" ? "duration-active" : "duration"}
+            variant={workMin === d && customVal === "" && !breakMode ? "duration-active" : "duration"}
             onClick={() => { setCustomVal(""); setDuration(d) }}
+            disabled={running}
           >
             {d} min
           </Button>
@@ -291,6 +368,7 @@ export default function Timer(): React.ReactElement {
             placeholder="?"
             value={customVal}
             onChange={(e) => handleCustom(e.target.value)}
+            disabled={running}
           />
           <span>min</span>
         </div>
@@ -328,7 +406,7 @@ export default function Timer(): React.ReactElement {
       <div className="ring-wrap">
         <canvas ref={canvasRef} width="180" height="180" />
         <div className="ring-inner">
-          <div className="time-display" style={{ color: nearEnd ? "var(--amber)" : undefined }}>
+          <div className="time-display" style={{ color: ringColor }}>
             {fmt(remaining)}
           </div>
           <div className="phase-label">{phase}</div>
@@ -362,9 +440,28 @@ export default function Timer(): React.ReactElement {
       </div>
 
       {doneMsg !== null && (
-        <div className="done-banner" style={{ marginTop: 12 }}>
-          <IconCircleCheck size={15} />
-          {doneMsg}
+        <div className="done-wrap">
+          <div className="done-banner">
+            <IconCircleCheck size={15} />
+            {doneMsg}
+          </div>
+          {phase === "klaar!" && (
+            <div className="break-row">
+              <IconCoffee size={13} className="break-row-icon" />
+              {BREAK_DURATIONS.map((d) => (
+                <Button
+                  key={d}
+                  variant={breakMin === d ? "duration-active" : "duration"}
+                  onClick={() => setBreakMin(d)}
+                >
+                  {d} min
+                </Button>
+              ))}
+              <Button variant="primary" onClick={() => startBreak(breakMin)}>
+                Start pauze
+              </Button>
+            </div>
+          )}
         </div>
       )}
     </div>
