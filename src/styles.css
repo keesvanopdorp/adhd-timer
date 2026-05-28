@@ -604,6 +604,7 @@ body {
 .data-section-sub { font-size: 12px; color: var(--text2); }
 
 .data-btn { display: flex; align-items: center; gap: 6px; align-self: flex-start; }
+.data-btn-row { display: flex; gap: 6px; flex-wrap: wrap; }
 
 .data-textarea {
   width: 100%;

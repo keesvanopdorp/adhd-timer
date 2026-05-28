@@ -1,5 +1,5 @@
 import React, { useRef, useState } from "react"
-import { IconDownload, IconUpload, IconMenu2, IconAlertTriangle } from "@tabler/icons-react"
+import { IconDownload, IconUpload, IconMenu2, IconAlertTriangle, IconCopy, IconCheck } from "@tabler/icons-react"
 import {
   Dialog,
   DialogTrigger,
@@ -34,18 +34,24 @@ function isPersistedData(v: unknown): v is PersistedData {
   )
 }
 
+function tryParse(text: string): PersistedData | null {
+  try {
+    const parsed: unknown = JSON.parse(text)
+    return isPersistedData(parsed) ? parsed : null
+  } catch {
+    return null
+  }
+}
+
 export default function DataModal(): React.ReactElement {
   const loadData = useTimerStore((s) => s.loadData)
   const fileRef = useRef<HTMLInputElement>(null)
   const [importError, setImportError] = useState<string | null>(null)
   const [importOk, setImportOk] = useState(false)
+  const [importText, setImportText] = useState<string>("")
   const [open, setOpen] = useState(false)
   const [confirmReset, setConfirmReset] = useState(false)
-
-  const handleReset = (): void => {
-    loadData({ tasks: [], blocksDone: 0, totalFocusMin: 0, streak: 0, lastBlockDate: null })
-    setConfirmReset(false)
-  }
+  const [copied, setCopied] = useState(false)
 
   const json = JSON.stringify(getExportData(), null, 2)
 
@@ -59,6 +65,18 @@ export default function DataModal(): React.ReactElement {
     URL.revokeObjectURL(url)
   }
 
+  const handleCopy = (): void => {
+    navigator.clipboard.writeText(json).then(() => {
+      setCopied(true)
+      setTimeout(() => setCopied(false), 2000)
+    }).catch(() => undefined)
+  }
+
+  const handleReset = (): void => {
+    loadData({ tasks: [], blocksDone: 0, totalFocusMin: 0, streak: 0, lastBlockDate: null })
+    setConfirmReset(false)
+  }
+
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>): void => {
     setImportError(null)
     setImportOk(false)
@@ -66,24 +84,32 @@ export default function DataModal(): React.ReactElement {
     if (!file) return
     const reader = new FileReader()
     reader.onload = (ev) => {
-      try {
-        const parsed: unknown = JSON.parse(ev.target?.result as string)
-        if (!isPersistedData(parsed)) {
-          setImportError("Ongeldig formaat — is dit een backup van deze app?")
-          return
-        }
-        loadData(parsed)
-        setImportOk(true)
-      } catch {
-        setImportError("Kan het bestand niet lezen.")
-      }
+      const result = tryParse(ev.target?.result as string)
+      if (!result) { setImportError("Ongeldig formaat — is dit een backup van deze app?"); return }
+      loadData(result)
+      setImportOk(true)
     }
     reader.readAsText(file)
     e.target.value = ""
   }
 
+  const handleTextImport = (): void => {
+    setImportError(null)
+    setImportOk(false)
+    const result = tryParse(importText.trim())
+    if (!result) { setImportError("Ongeldig formaat — is dit een backup van deze app?"); return }
+    loadData(result)
+    setImportOk(true)
+    setImportText("")
+  }
+
+  const resetFeedback = (): void => {
+    setImportError(null)
+    setImportOk(false)
+  }
+
   return (
-    <Dialog open={open} onOpenChange={(v) => { setOpen(v); if (!v) { setImportError(null); setImportOk(false); setConfirmReset(false) } }}>
+    <Dialog open={open} onOpenChange={(v) => { setOpen(v); if (!v) { resetFeedback(); setConfirmReset(false); setImportText("") } }}>
       <DialogTrigger asChild>
         <button className="hamburger-btn" aria-label="Menu">
           <IconMenu2 size={16} />
@@ -96,11 +122,16 @@ export default function DataModal(): React.ReactElement {
 
         <div className="data-section">
           <div className="data-section-label">Export</div>
-          <p className="data-section-sub">Download een JSON-backup of kopieer de data hieronder.</p>
-          <Button variant="default" onClick={handleDownload} className="data-btn">
-            <IconDownload size={13} />
-            Download backup
-          </Button>
+          <div className="data-btn-row">
+            <Button variant="default" onClick={handleDownload} className="data-btn">
+              <IconDownload size={13} />
+              Download backup
+            </Button>
+            <Button variant="default" onClick={handleCopy} className="data-btn">
+              {copied ? <IconCheck size={13} /> : <IconCopy size={13} />}
+              {copied ? "Gekopieerd!" : "Kopieer JSON"}
+            </Button>
+          </div>
           <textarea className="data-textarea" readOnly value={json} />
         </div>
 
@@ -108,7 +139,7 @@ export default function DataModal(): React.ReactElement {
 
         <div className="data-section">
           <div className="data-section-label">Import</div>
-          <p className="data-section-sub">Laad een eerder geëxporteerde backup. Dit overschrijft alle huidige data.</p>
+          <p className="data-section-sub">Laad via bestand of plak JSON hieronder. Dit overschrijft alle huidige data.</p>
           <input
             ref={fileRef}
             type="file"
@@ -116,9 +147,25 @@ export default function DataModal(): React.ReactElement {
             className="sr-only"
             onChange={handleFileChange}
           />
-          <Button variant="default" onClick={() => fileRef.current?.click()} className="data-btn">
+          <Button variant="default" onClick={() => { resetFeedback(); fileRef.current?.click() }} className="data-btn" style={{ alignSelf: "flex-start" }}>
             <IconUpload size={13} />
             Kies bestand
+          </Button>
+          <textarea
+            className="data-textarea"
+            placeholder="Of plak JSON hier..."
+            value={importText}
+            onChange={(e) => { setImportText(e.target.value); resetFeedback() }}
+            spellCheck={false}
+          />
+          <Button
+            variant="default"
+            onClick={handleTextImport}
+            className="data-btn"
+            disabled={importText.trim() === ""}
+            style={{ alignSelf: "flex-start" }}
+          >
+            Laden
           </Button>
           {importError !== null && <div className="data-feedback error">{importError}</div>}
           {importOk && <div className="data-feedback ok">Backup geladen.</div>}
