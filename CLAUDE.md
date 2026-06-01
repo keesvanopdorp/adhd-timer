@@ -27,9 +27,19 @@ npm run preview   # serve the dist/ build locally
 
 Always run `npm run build` after changes. The build runs `tsc -b` first so TypeScript errors surface before Vite bundles.
 
+## shadcn/ui components
+
+Always install shadcn components via the CLI — never create them manually:
+
+```bash
+npx shadcn@latest add <component>
+```
+
+Then adapt the generated file to use the project's existing CSS class names instead of Tailwind utilities, consistent with the rest of `src/components/ui/`.
+
 ## Version control
 
-- Commits are fine to create automatically after completing a task.
+- After completing a task, ask the user if they want a commit before creating one.
 - **Never `git push` unless the user explicitly asks for it.**
 
 ## Project structure

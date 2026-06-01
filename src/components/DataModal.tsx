@@ -96,6 +96,7 @@ export default function DataModal(): React.ReactElement {
   const handleTextImport = (): void => {
     setImportError(null)
     setImportOk(false)
+    if (importText.trim() === "") { setImportError("Plak eerst JSON in het tekstveld."); return }
     const result = tryParse(importText.trim())
     if (!result) { setImportError("Ongeldig formaat — is dit een backup van deze app?"); return }
     loadData(result)
@@ -162,7 +163,6 @@ export default function DataModal(): React.ReactElement {
             variant="default"
             onClick={handleTextImport}
             className="data-btn"
-            disabled={importText.trim() === ""}
             style={{ alignSelf: "flex-start" }}
           >
             Laden
