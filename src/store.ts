@@ -5,7 +5,7 @@ import { RULE_COUNT } from './types'
 
 type PersistedState = Pick<
   TimerState,
-  'tasks' | 'blocksDone' | 'totalFocusMin' | 'streak' | 'lastBlockDate'
+  'tasks' | 'blocksDone' | 'totalFocusMin' | 'streak' | 'lastBlockDate' | 'reducedMotion'
 >
 
 export const useTimerStore = create<TimerState>()(
@@ -83,6 +83,9 @@ export const useTimerStore = create<TimerState>()(
           lastBlockDate: data.lastBlockDate,
           activeTaskId: null,
         }),
+
+      reducedMotion: null,
+      setReducedMotion: (val) => set({ reducedMotion: val }),
     }),
     {
       name: 'adhd-timer-kees',
@@ -93,6 +96,7 @@ export const useTimerStore = create<TimerState>()(
         totalFocusMin: s.totalFocusMin,
         streak: s.streak,
         lastBlockDate: s.lastBlockDate,
+        reducedMotion: s.reducedMotion,
       }),
     }
   )

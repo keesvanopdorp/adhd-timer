@@ -8,6 +8,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { useTimerStore } from "../store"
 import type { PersistedData } from "../types"
 
@@ -45,6 +46,12 @@ function tryParse(text: string): PersistedData | null {
 
 export default function DataModal(): React.ReactElement {
   const loadData = useTimerStore((s) => s.loadData)
+  const setReducedMotion = useTimerStore((s) => s.setReducedMotion)
+  // "on" = animations on = reducedMotion false, "off" = animations off = reducedMotion true
+  const [motionPref, setMotionPref] = useState<"auto" | "on" | "off">(() => {
+    const v = useTimerStore.getState().reducedMotion
+    return v === null ? "auto" : v ? "off" : "on"
+  })
   const fileRef = useRef<HTMLInputElement>(null)
   const [importError, setImportError] = useState<string | null>(null)
   const [importOk, setImportOk] = useState(false)
@@ -169,6 +176,32 @@ export default function DataModal(): React.ReactElement {
           </Button>
           {importError !== null && <div className="data-feedback error">{importError}</div>}
           {importOk && <div className="data-feedback ok">Backup geladen.</div>}
+        </div>
+
+        <div className="data-divider" />
+
+        <div className="data-section">
+          <div className="data-section-label">Toegankelijkheid</div>
+          <div className="data-setting-row">
+            <span className="data-setting-label">Confetti &amp; animaties</span>
+            <Select
+              value={motionPref}
+              onValueChange={(v: string) => {
+                const val = v as "auto" | "on" | "off"
+                setMotionPref(val)
+                setReducedMotion(val === "auto" ? null : val === "off")
+              }}
+            >
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="auto">Automatisch (volgt systeem)</SelectItem>
+                <SelectItem value="on">Altijd aan</SelectItem>
+                <SelectItem value="off">Altijd uit</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
         </div>
 
         <div className="data-divider" />

@@ -1,13 +1,23 @@
-import React from "react"
+import React, { useEffect } from "react"
 import Timer from './components/Timer'
 import Checklist from './components/Checklist'
 import Backlog from './components/Backlog'
 import Stats from './components/Stats'
 import DataModal from './components/DataModal'
 import { Separator } from '@/components/ui/separator'
+import { useTimerStore } from './store'
 import './styles.css'
 
 export default function App(): React.ReactElement {
+  const reducedMotion = useTimerStore((s) => s.reducedMotion)
+
+  useEffect(() => {
+    const active =
+      reducedMotion === true ||
+      (reducedMotion === null && window.matchMedia("(prefers-reduced-motion: reduce)").matches)
+    document.documentElement.classList.toggle("reduced-motion", active)
+  }, [reducedMotion])
+
   return (
     <div className="app">
       <header className="app-header">

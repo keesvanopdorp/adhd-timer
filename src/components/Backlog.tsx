@@ -1,4 +1,5 @@
 import React, { useState } from "react"
+import confetti from "canvas-confetti"
 import {
   IconPlayerPlay,
   IconCheck,
@@ -101,6 +102,19 @@ export default function Backlog(): React.ReactElement {
     }
   }
 
+  const handleComplete = (id: number): void => {
+    const task = tasks.find((t) => t.id === id)
+    completeTask(id)
+    if (document.documentElement.classList.contains("reduced-motion")) return
+    const scale = task ? Math.min(task.blocks, 5) : 1
+    const colors = ["#5c54d4", "#1a9e6e", "#c47a0a", "#d4d1f8", "#e0f4ed", "#ffffff"]
+    void confetti({ particleCount: 60 * scale, angle: 60,  spread: 55 + scale * 4, origin: { x: 0, y: 0.7 }, colors })
+    void confetti({ particleCount: 60 * scale, angle: 120, spread: 55 + scale * 4, origin: { x: 1, y: 0.7 }, colors })
+    setTimeout(() => {
+      void confetti({ particleCount: 30 * scale, spread: 70 + scale * 5, origin: { x: 0.5, y: 0.5 }, colors, scalar: 1 + scale * 0.15 })
+    }, 150)
+  }
+
   const handleBlocksChange = (val: string): void => {
     const n = parseInt(val, 10)
     if ((BLOCK_OPTIONS as readonly number[]).includes(n)) {
@@ -172,7 +186,7 @@ export default function Backlog(): React.ReactElement {
                 task={task}
                 isActive={task.id === activeTaskId}
                 onSelect={selectTask}
-                onComplete={completeTask}
+                onComplete={handleComplete}
                 onDelete={deleteTask}
               />
             ))

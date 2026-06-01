@@ -30,6 +30,10 @@ export interface TimerState {
 
   // data management
   loadData: (data: PersistedData) => void
+
+  // accessibility
+  reducedMotion: boolean | null
+  setReducedMotion: (val: boolean | null) => void
 }
 
 export interface PersistedData {

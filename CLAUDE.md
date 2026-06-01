@@ -135,6 +135,22 @@ Both wrapped in try/catch because `AudioContext` can be unavailable. Sound can b
 5. Add styles to `styles.css`
 6. Mount in `App.tsx`
 
+### Reduced motion / animations
+
+The `reducedMotion: boolean | null` field in the store controls a `reduced-motion` class on `<html>`, resolved in `App.tsx`. The store value maps as follows:
+
+| Store value | UI label | `reduced-motion` class | Confetti |
+|-------------|----------|------------------------|---------|
+| `null` | Automatisch (volgt systeem) | follows OS `prefers-reduced-motion` | follows OS |
+| `false` | Altijd aan | absent | ✓ fires |
+| `true` | Altijd uit | present | ✗ blocked |
+
+**Important:** the UI control is labelled "Confetti & animaties" (animations perspective), so "Altijd uit" = `reducedMotion: true` = class present = no animations. This is the inverse of what the field name suggests — don't flip it back.
+
+CSS animations are disabled under `.reduced-motion` using `data-state` selectors (not bare class selectors) to prevent replaying when the setting changes while a dialog is open.
+
+Components that fire animations must check `document.documentElement.classList.contains("reduced-motion")` — do **not** subscribe to the store value directly, as that causes re-renders mid-animation.
+
 ## Known constraints
 
 - No routing — single page, no React Router
